@@ -1,0 +1,45 @@
+				不完全统计的编码
+fileExtension       		videoCoding			   	audioCoding
+
+3gp                             h263/h264/mpeg4			    	aac	
+
+3g2				h263/h264/mpeg4		    		aac
+						
+asf/wma/wmv			almost anything				almost anything
+
+avi				almost anything				almost anything
+
+divx				mpeg4					mp3/pcm/ac3 //封装格式不支持
+													
+evo				mpeg2/mpeg4/h264/			ac3/mp2  //封装格式不支持
+
+f4v				h264/					mp3/aac
+
+flv				h264					mp3/aac
+
+mkv/mk3d/mka/mks		virtually anything			virtually anything  //mk3d,mks封装格式不支持
+
+mcf				not fully specified			not fully specified  //估计不支持
+
+mp4				h263/h264/h265/hevc/mpeg4/mpeg2		aac/ac3/mp2/mp3
+
+mpeg/mpg			mpeg1/mpeg2				mp3/mp2/mp1
+
+m2p/ps				mpeg1/mpeg2/mpeg4/h264			mp3/mp2/mp1/aac/ac3 //封装格式不支持
+
+ts				mpeg1/mpeg2/mpeg4/h264			mp3/mp2/mp1/aac/ac3
+
+m2ts				mpeg2/h264				ac3/mp2/mp3
+
+mxf				virtually anything			virtually anything
+
+ogg				//编码没有弄清楚有哪些				
+
+mov/qt				mpeg2/mpeg4/h261/h263/h264		aac/mp3  //qt封装格式不支持
+
+webm				vp8/vp9					vorbis/opus    //vp8.vp9目前不支持
+
+目前暂不支持的编码 
+视频  vp8,vp9
+音频  mp1,
+				

@@ -1,0 +1,53 @@
+- Bitstream filters for editing metadata in H.264, HEVC and MPEG-2 streams
+- Dropped support for OpenJPEG versions 2.0 and below. Using OpenJPEG now（不再支持OpenJPEG 2.0及以下版本。现在使用OpenJPEG2.1及以后的版本）
+  requires 2.1 (or later) and pkg-config.
+- VDA dropped (use VideoToolbox instead)（废除VDA，使用VideoToolbox  替代 https://developer.apple.com/documentation/videotoolbox）
+- MagicYUV encoder（MagicYUV编码器，用于4k及以上的无损视频编解码器   https://www.magicyuv.com/）
+- Raw AMR-NB and AMR-WB demuxers（AMR-NB和AMR-WB解复用器  https://zh.wikipedia.org/wiki/%E8%87%AA%E9%80%82%E5%BA%94%E5%A4%9A%E9%80%9F%E7%8E%87%E9%9F%B3%E9%A2%91%E5%8E%8B%E7%BC%A9）
+- TiVo ty/ty+ demuxer（TiVo ty / ty + 解复用器  由TiVo DVR设备录制的视频文件; 使用MPEG-2压缩存储视频并包含版权保护; 用于保存电视节目和电影以供日后观看）
+- Intel QSV-accelerated MJPEG encoding（英特尔QSV加速MJPEG编码）
+- PCE support for extended channel layouts in the AAC encoder
+- native aptX and aptX HD encoder and decoder（aptX and aptX HD  编码器和解码器，音频压缩  https://zh.wikipedia.org/wiki/AptX）
+- Raw aptX and aptX HD muxer and demuxer（aptX and aptX HD  复用器和解复用器）
+- NVIDIA NVDEC-accelerated H.264, HEVC, MJPEG, MPEG-1/2/4, VC1, VP8/9 hwaccel decoding（NVIDIA 加速解码）
+- Intel QSV-accelerated overlay filter（英特尔QSV加速覆盖滤波器）
+- mcompand audio filter
+- acontrast audio filter
+- OpenCL overlay filter
+- video mix filter
+- video normalize filter
+- audio lv2 wrapper filter
+- VAAPI MJPEG and VP8 decoding（VAAPI硬件 MJPEG VP8解码）
+- AMD AMF H.264 and HEVC encoders（AMD  AMF硬件 H.264 HEVC  编码器）
+- video fillborders filter
+- video setrange filter
+- nsp demuxer  （新增nsp音频解封装  https://filext.com/file-extension/NSP）
+- support LibreSSL (via libtls)
+- AVX-512/ZMM support added
+- Dropped support for building for Windows XP. The minimum supported Windows（不再支持Windows XP构建。支持的最低Windows）
+  version is Windows Vista.
+- deconvolve video filter
+- entropy video filter
+- hilbert audio filter source
+- aiir audio filter
+- aiff: add support for CD-ROM XA ADPCM
+- Removed the ffserver program（删除了ffserver程序,https://trac.ffmpeg.org/wiki/ffserver,对ffserver的介绍）
+- Removed the ffmenc and ffmdec muxer and demuxer
+- VideoToolbox HEVC encoder and hwaccel （VideoToolbox 硬件HEVC编码器）
+- VAAPI-accelerated ProcAmp (color balance), denoise and sharpness filters
+- Add android_camera indev
+- codec2 en/decoding via libcodec2
+- muxer/demuxer for raw codec2 files and .c2 files（codec2 语音 复用和解复用 https://en.wikipedia.org/wiki/Codec_2）
+- Moved nvidia codec headers into an external repository.
+  They can be found at http://git.videolan.org/?p=ffmpeg/nv-codec-headers.git
+- native SBC encoder and decoder（SBC 蓝牙音频 编码和解码   https://en.wikipedia.org/wiki/SBC_(codec)）
+- drmeter audio filter
+- hapqa_extract bitstream filter
+- filter_units bitstream filter
+- AV1 Support through libaom
+- E-AC-3 dependent frames support
+- bitstream filter for extracting E-AC-3 core
+- Haivision SRT protocol via libsrt
+- segafilm muxer
+- vfrdet filter
+- SRCNN filter

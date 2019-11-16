@@ -1,0 +1,32 @@
+- CrystalHD decoder moved to new decode API
+- add internal ebur128 library, remove external libebur128 dependency（添加内部ebur128库，删除外部libebur128依赖项，音频处理）
+- Pro-MPEG CoP #3-R2 FEC protocol（Pro-MPEG CoP #3-R2 FEC）
+- premultiply video filter
+- Support for spherical videos
+- configure now fails if autodetect-libraries are requested but not found
+- PSD Decoder（PSD解码器支持，https://www.lifewire.com/psd-file-2622194）
+- 16.8 floating point pcm decoder（pcm 解码器支持,https://www.jianshu.com/p/e568f94cdf6a）
+- 24.0 floating point pcm decoder
+- Apple Pixlet decoder（apple pixlet解码器支持,https://en.wikipedia.org/wiki/Pixlet）
+- QDMC audio decoder（QDMC audio 解码器支持 https://www.siggraph.org/education/materials/HyperGraph/video/codecs/QDMC.html）
+- NewTek SpeedHQ decoder（NewTek SpeedHQ解码器支持）
+- MIDI Sample Dump Standard demuxer（MIDI 音频解复用的支持 https://www.lifewire.com/midi-file-2621979）
+- readeia608 filter
+- Sample Dump eXchange demuxer
+- abitscope multimedia filter
+- Scenarist Closed Captions demuxer and muxer（SCC 字幕文件格式的复用和解复用）
+- threshold filter
+- midequalizer filter
+- Optimal Huffman tables for (M)JPEG encoding（https://www.impulseadventure.com/photo/optimized-jpeg.html）
+- VAAPI-accelerated MPEG-2 and VP8 encoding  （VAAPI硬件加速MPEG-2 VP8编码）
+- FM Screen Capture Codec decoder
+- native Opus encoder（OPUS 音频编码http://opus-codec.org/）
+- ScreenPressor decoder  （ScreenPressor是一种专为视频屏幕捕获（截屏视频）而设计的无损视频编解码器 http://www.infognition.com/ScreenPressor/）
+- incomplete ClearVideo decoder （https://wiki.multimedia.cx/index.php/ClearVideo  https://baike.baidu.com/item/%E8%8B%B1%E7%89%B9%E5%B0%94%E6%B8%85%E6%99%B0%E8%A7%86%E9%A2%91%E6%8A%80%E6%9C%AF/10054932?fr=aladdin）
+- Intel QSV video scaling and deinterlacing filters
+- Support MOV with multiple sample description tables
+- XPM decoder（XPM 解码器支持 图片格式  https://en.wikipedia.org/wiki/X_PixMap） 
+- Removed the legacy X11 screen grabber, use XCB instead（删除了旧版X11屏幕抓取器，改为使用XCB）
+- MPEG-7 Video Signature filter
+- Removed asyncts filter (use af_aresample instead)
+- Intel QSV-accelerated VP8 video decoding（英特尔QSV加速VP8视频解码）

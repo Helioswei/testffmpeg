@@ -1,0 +1,7 @@
+ffmpeg 支持的输入输出协议    https://ffmpeg.org/ffmpeg-protocols.html
+ffmpeg 硬件加速介绍   https://trac.ffmpeg.org/wiki/HWAccelIntro
+TAA音频格式的介绍    https://zh.wikipedia.org/wiki/TTA
+MediaCodec（安卓平台音视频转码api）  https://developer.android.com/reference/android/media/MediaCodec
+音视频编解码表格   https://en.wikipedia.org/wiki/Meridian_Lossless_Packing   
+http://en.wikipedia.org/wiki/Comparison_of_audio_formats                  
+视频封装格式 https://en.wikipedia.org/wiki/Comparison_of_video_container_formats

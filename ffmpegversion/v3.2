@@ -1,0 +1,36 @@
+- libopenmpt demuxer  （libopenmpt  解复用器，解封装）
+- tee protocol  （tee 协议的支持）
+- Changed metadata print option to accept general urls
+- Alias muxer for Ogg Video (.ogv)  （ogg  复用器，封装）
+- VP8 in Ogg muxing  （vp8 复用器，封装）
+- curves filter doesn't automatically insert points at x=0 and x=1 anymore
+- 16-bit support in curves filter and selectivecolor filter
+- OpenH264 decoder wrapper
+- MediaCodec H.264/HEVC/MPEG-4/VP8/VP9 hwaccel （MediaCodec硬件加速对于 H.264/HEVC/MPEG-4/VP8/VP9编解码）
+- True Audio (TTA) muxer （TTA 复用器 ，封装）
+- crystalizer audio filter
+- acrusher audio filter
+- bitplanenoise video filter
+- floating point support in als decoder
+- fifo muxer
+- maskedclamp filter
+- hysteresis filter
+- lut2 filter
+- yuvtestsrc filter
+- CUDA CUVID H.263/VP8/VP9/10 bit HEVC (Dithered) Decoding  （CUVID硬件 解码 H.263/VP8/VP9/10 bit HEVC）
+- vaguedenoiser filter
+- added threads option per filter instance（每个过滤器实例添加了线程选项）
+- weave filter
+- gblur filter
+- avgblur filter
+- sobel and prewitt filter
+- MediaCodec HEVC/MPEG-4/VP8/VP9 decoding （HEVC/MPEG-4/VP8/VP9 MediaCodec 解码支持）
+- Meridian Lossless Packing (MLP) / TrueHD encoder  （ https://en.wikipedia.org/wiki/Meridian_Lossless_Packing    MLP  DVD音频内容无损压缩）
+- Non-Local Means (nlmeans) denoising filter
+- sdl2 output device and ffplay support（sdl2输出设备和ffplay支持）
+- sdl1 output device and sdl1 support removed（删除了sdl1输出设备和sdl1支持）
+- extended mov edit list support
+- libfaac encoder removed
+- Matroska muxer now writes CRC32 elements by default in all Level 1 elements
+- sidedata video and asidedata audio filter
+- Changed mapping of rtp MIME type G726 to codec g726le
