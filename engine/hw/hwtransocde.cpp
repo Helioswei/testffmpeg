@@ -55,6 +55,19 @@ static int open_input_file(const string filename)
         return ret;
     }
     video_stream = ret;
+
+    for(int i = 0; ; i++){
+        const AVCodecHWConfig *config = avcodec_get_hw_config(decoder, i);
+        if (!config){
+            av_log(NULL, AV_LOG_ERROR,"Decoder %s does not support device type %s",decoder -> name, av_hwdevice_get_type_name(AV_HWDEVICE_TYPE_CUDA));
+            return -1;
+        }
+        if (config -> methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX && config -> device_type == AV_HWDEVICE_TYPE_CUDA){
+            hw_pix_fmt = config -> pix_fmt;
+            break;
+        }
+    }
+
     decoder_ctx = avcodec_alloc_context3(decoder);
     if (NULL == decoder_ctx)
         return AVERROR(ENOMEM);
@@ -148,7 +161,7 @@ static int dec_enc(AVPacket *pkt, AVCodec *enc_codec)
             //set AVCodecContext Parameters for encoder, here we keep them stay the same as decoder
             //now the sample can't handle resolution change case
             encoder_ctx -> time_base = av_inv_q(decoder_ctx ->framerate);
-            encoder_ctx -> pix_fmt = AV_PIX_FMT_VAAPI;
+            encoder_ctx -> pix_fmt = hw_pix_fmt;
             encoder_ctx -> width = decoder_ctx -> width;
             encoder_ctx -> height = decoder_ctx -> height;
         
