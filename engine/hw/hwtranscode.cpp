@@ -36,7 +36,6 @@ static int open_input_file(const string filename)
 {
     int ret;
     AVCodec *decoder = NULL;
-    AVStream *video = NULL;
 
     ret = avformat_open_input(&ifmt_ctx, filename.c_str(), NULL, NULL);
     if(0 > ret){
@@ -55,6 +54,7 @@ static int open_input_file(const string filename)
         return ret;
     }
     video_stream = ret;
+    ost = ifmt_ctx -> streams[ret]; 
 
     for(int i = 0; ; i++){
         const AVCodecHWConfig *config = avcodec_get_hw_config(decoder, i);
@@ -68,25 +68,33 @@ static int open_input_file(const string filename)
         }
     }
 
+    decoder = NULL;
+    decoder = avcodec_find_decoder(ost -> codecpar -> codec_id);
+    if (NULL == decoder){
+        LOG(-1, "Failed to find video decoder");
+        return -1; 
+    }
     decoder_ctx = avcodec_alloc_context3(decoder);
     if (NULL == decoder_ctx)
         return AVERROR(ENOMEM);
 
-    video = ifmt_ctx -> streams[video_stream];
 
-    ret = avcodec_parameters_to_context(decoder_ctx, video -> codecpar);
+    ret = avcodec_parameters_to_context(decoder_ctx, ost -> codecpar);
     if (0 > ret){
         LOG(ret, "avcodec_parameters_to_context error");
         return ret;
     }
-    decoder_ctx -> hw_device_ctx = av_buffer_ref(hw_device_ctx); 
+    decoder_ctx -> framerate = av_guess_frame_rate(ifmt_ctx, ost, NULL);
+   decoder_ctx -> hw_device_ctx = av_buffer_ref(hw_device_ctx); 
     if (NULL == decoder_ctx ->hw_device_ctx){
         LOG(-1, "A hardware device reference create failed");
         return AVERROR(ENOMEM);
     }
     decoder_ctx -> get_format = get_vaapi_format;
 
-    ret = avcodec_open2(decoder_ctx, decoder, NULL);
+    AVDictionary *opts = NULL;
+    av_dict_set(&opts, "refcounted_frames", "0", 0);//frame 的分配和释放由ffmpeg自己控制
+    ret = avcodec_open2(decoder_ctx, decoder, &opts);
     if (0 > ret){
         LOG(ret, "Failed to open codec for decoding");
     }
@@ -211,7 +219,7 @@ int main(int argc, char* argv[])
     initLog();
 
     string filename("/root/source_media/flv.flv");
-    string dec("h264_vaapi");
+    string dec("nvenc_h264");
     string outputName("/root/vna.mp4");
     AVPacket dec_pkt;
     AVCodec *enc_codec;
