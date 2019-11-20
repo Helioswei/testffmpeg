@@ -3,7 +3,7 @@
 using namespace std;
 
 #define LOG(ret,error) \
-    av_log(NULL, AV_LOG_INFO,error ",Error code: %d,%s\n",ret,av_err2str(ret)) \ 
+    av_log(NULL, AV_LOG_INFO,error ",Error code: %d,%s,%s:%d\n",ret,av_err2str(ret),__FILE__, __LINE__) \ 
 
 static AVFormatContext *ifmt_ctx = NULL, *ofmt_ctx = NULL;
 static AVBufferRef *hw_device_ctx  = NULL;
@@ -11,6 +11,7 @@ static AVCodecContext *decoder_ctx = NULL, *encoder_ctx = NULL;
 static int video_stream = -1;
 static AVStream *ost;
 static int initialized = 0;
+static enum AVPixelFormat hw_pix_fmt;
 
 void initLog()
 {
@@ -22,13 +23,15 @@ static enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPix
 {
     const enum AVPixelFormat *p;
     for(p = pix_fmts; *p != AV_PIX_FMT_NONE; p++){
-        if (*p == AV_PIX_FMT_VAAPI)
+        if (*p == hw_pix_fmt)
             return *p;
     }
 
-
+    LOG(-1, "Failed to get  HW surface format");
+    return AV_PIX_FMT_NONE;
 
 }
+
 static int open_input_file(const string filename)
 {
     int ret;
@@ -200,9 +203,9 @@ int main(int argc, char* argv[])
     AVPacket dec_pkt;
     AVCodec *enc_codec;
 
-    ret = av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_VAAPI, NULL, NULL, 0);
+    ret = av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_CUDA, NULL, NULL, 0);
     if (0 > ret){
-        LOG(ret, "Failed to create a VAAPI device");
+        LOG(ret, "Failed to create a CUDA device");
         return -1;
     }
 
@@ -210,7 +213,7 @@ int main(int argc, char* argv[])
     ret = open_input_file(filename);
     if (0 > ret)
         goto end;
-    
+
     if (!(enc_codec = avcodec_find_encoder_by_name(dec.c_str()))){
         LOG(-1,"Could not find encoder");
         ret = -1;
