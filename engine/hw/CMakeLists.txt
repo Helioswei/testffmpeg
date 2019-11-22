@@ -10,4 +10,4 @@ ADD_EXECUTABLE(hw ${HW_DIR})
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/leopardlib)
 
 #指明共享库需要链接的其他链接库
-TARGET_LINK_LIBRARIES(hw  avformat avcodec avutil)
+TARGET_LINK_LIBRARIES(hw  avformat avcodec avutil swscale avfilter )

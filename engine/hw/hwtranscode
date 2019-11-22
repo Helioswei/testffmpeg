@@ -9,6 +9,8 @@ static AVFormatContext *ifmt_ctx = NULL, *ofmt_ctx = NULL;
 
 static AVCodecContext *decoder_ctx = NULL, *encoder_ctx = NULL;
 
+static SwsContext *videoScalerCtx;
+
 static AVBufferRef *hw_device_ctx = NULL;
 
 static int video_stream = -1;
@@ -19,8 +21,9 @@ static AVStream *oVStream = NULL;
 
 static enum AVPixelFormat hw_pix_fmt;
 //从config中取得hw_pix_fmt是AV_PIX_FMT_CUDA
-
-
+//int width = 640,height = 360;
+int width = 960,height = 480;
+int videoPTS = 0;
 
 void initLog()
 {
@@ -41,9 +44,13 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx)
 
     frames_ctx = (AVHWFramesContext *)(hw_frames_ref -> data);
     frames_ctx -> format = AV_PIX_FMT_CUDA;
-    frames_ctx -> sw_format = AV_PIX_FMT_YUV420P;
-    frames_ctx -> width = 640;
-    frames_ctx -> height = 360;
+    //frames_ctx -> sw_format = AV_PIX_FMT_YUV444P;
+    //frames_ctx -> sw_format = AV_PIX_FMT_YUV420P;
+    frames_ctx -> sw_format = AV_PIX_FMT_NV12;
+    frames_ctx -> width = width;
+    frames_ctx -> height = height;
+    //frames_ctx -> width = 960;
+    //frames_ctx -> height = 480;
     frames_ctx -> initial_pool_size = 20;
     err = av_hwframe_ctx_init(hw_frames_ref);
     if (0 > err){
@@ -70,6 +77,40 @@ static enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx,const enum AVPixe
     return AV_PIX_FMT_NONE;
 }
 
+
+static int init_repixel(AVCodecContext *decCtx, AVCodecContext *encCtx, SwsContext **repixelCtx)
+{
+    int error;
+    *repixelCtx = sws_getCachedContext(NULL,
+            decCtx -> width, decCtx -> height, decCtx -> pix_fmt,
+            encCtx -> width, encCtx -> height, encCtx -> pix_fmt,
+            SWS_BICUBIC,
+            NULL, NULL, NULL);
+    if (!*repixelCtx){
+        LOG(-1, "Could not allocate repixel context\n");
+        return AVERROR(ENOMEM);
+    }
+    return 0;
+}
+
+static int init_out_frame(AVFrame **frame, AVCodecContext *encCtx)
+{
+    int error;
+    if (!(*frame = av_frame_alloc())){
+        LOG(-1, "Could not allocate output frame");
+        return AVERROR_EXIT;
+    }
+    (*frame) -> format = encCtx -> pix_fmt;
+    (*frame) -> width = encCtx -> width;
+    (*frame) -> height = encCtx -> height;
+    
+    error = av_frame_get_buffer(*frame, 0);
+    if (0 > error){
+        LOG(error, "Could not allocate output frame samples");
+        return error;
+    }
+    return 0;
+}
 
 static int open_input_file(const string filename)
 {
@@ -202,8 +243,9 @@ static int open_output_file(const string filename)
 #else 
     encoder_ctx -> pix_fmt = enc -> pix_fmts[0];
 #endif
-    encoder_ctx -> width = decoder_ctx -> width;
-    encoder_ctx -> height = decoder_ctx -> height;
+    encoder_ctx -> width = width;
+    encoder_ctx -> height = height;
+    //encoder_ctx -> 
     //encoder_ctx -> codec_id = enc -> id;
     //encoder_ctx -> codec_type = AVMEDIA_TYPE_VIDEO;
 #ifdef USECUDA 
@@ -314,7 +356,7 @@ int main(int argc, char* argv[])
         outputFile = argv[2];
     }else{
         inputFile = "/root/source_media/flv.flv";
-        outputFile = "/opt/natr.mp4";
+        outputFile = "/opt/nvdefault.mp4";
     }
     //string inputFile("/root/source_media/flv.flv");
     // string inputFile("/root/video/11.mkv");
@@ -333,6 +375,12 @@ int main(int argc, char* argv[])
         return ret;
     }
 
+    //初始化像素转换
+    //ret = init_repixel(decoder_ctx, encoder_ctx, &videoScalerCtx);
+    //if (0 > ret){
+    //    LOG(ret, "Failed while call initRepixel");
+    //    return ret;
+    //}
     //初始化AVPacket
     AVPacket packet;
     av_init_packet(&packet);
@@ -363,7 +411,7 @@ int main(int argc, char* argv[])
             if (AVERROR(EAGAIN) == ret){
                 av_frame_free(&frame);
                 ret = AVERROR(EAGAIN);
-                LOG(ret, "avcodec_receive_frame return EAGAIN");
+                //LOG(ret, "avcodec_receive_frame return EAGAIN");
                 ret = 0;
                 //则继续进行解码，让其填充解码器
             }else if (AVERROR_EOF == ret){
@@ -378,13 +426,87 @@ int main(int argc, char* argv[])
                 return ret;
             }else {
                 //解码成功
-                cout << "解码成功,开始编码" << endl;
-                ret = encode_write(frame);
+                cout << "解码成功,从GPU获取frame到CPU" << endl;
+
+                AVFrame *outFrame;//get frame from GPU to CPU
+                outFrame = av_frame_alloc();
+                ret = av_hwframe_transfer_data(outFrame, frame, 0);
                 if (0 > ret){
-                    LOG(ret, "Error during encoding and writing");
+                    LOG(ret, "get Frame failed");
                     return ret;
                 }
-                av_frame_unref(frame);
+                outFrame -> pts = frame -> pts;
+                av_frame_free(&frame);
+                videoScalerCtx = sws_getCachedContext(NULL,
+                        decoder_ctx -> width, decoder_ctx -> height, AV_PIX_FMT_NV12,
+                        width, height, AV_PIX_FMT_NV12,//AV_PIX_FMT_YUV420P,
+                        SWS_BICUBIC,
+                        NULL, NULL, NULL);
+                if (NULL == videoScalerCtx){
+                    LOG(-1, "Failed sws_getCachedContext");
+                    return -1;
+                }else {
+                    AVFrame *swsFrame;
+                    swsFrame = av_frame_alloc();
+                    swsFrame -> format = AV_PIX_FMT_NV12;
+                    swsFrame -> width = width;
+                    swsFrame -> height = height;
+                    swsFrame -> pts = outFrame -> pts;
+                    ret = av_frame_get_buffer(swsFrame, 0);
+                    if (0 > ret){
+                        LOG(ret, "av_frame_get_buffer failed");
+                        return ret;
+                    }
+                    int len = sws_scale(videoScalerCtx, outFrame -> data, outFrame -> linesize, 0,
+                           outFrame -> height, swsFrame -> data, swsFrame -> linesize);
+                    if (0 >= len){
+                        LOG(-1, "Failed when video repixel");
+                        av_frame_free(&swsFrame);
+                        av_frame_free(&outFrame);
+                        return -1;
+                    }
+
+                    av_frame_free(&outFrame);
+                    //将CPU的数据放入到GPU中
+                    AVFrame *gpuFrame;
+                    gpuFrame = av_frame_alloc();
+                    gpuFrame -> format = hw_pix_fmt;
+                    gpuFrame -> width = width;
+                    gpuFrame -> height = height;
+                    gpuFrame -> pts = swsFrame -> pts;
+                    ret = av_hwframe_get_buffer(encoder_ctx -> hw_frames_ctx,gpuFrame, 0);
+                    if (0 > ret){
+                        LOG(ret, "gpuFrame av_frame_get_buffer failed");
+                        return ret;
+                    }
+                    ret = av_hwframe_transfer_data(gpuFrame, swsFrame, 0);
+                    if (0 > ret){
+                        LOG(ret, "put frame to GPU failed");
+                        return ret;
+                    }
+                    av_frame_free(&swsFrame);
+                    cout << "start encoding " << endl;
+                    ret = encode_write(gpuFrame);
+                    if (0 > ret){
+                        LOG(ret, "Error during encoding and writing");
+                        return ret;
+                    }
+                    av_frame_free(&gpuFrame);
+                
+                }
+
+
+
+
+                //av_frame_free(&frame);
+                //cout << "start encoding" << endl;
+                //ret = encode_write(frame);
+                //if (0 > ret){
+                //    LOG(ret, "Error during encoding and writing");
+                //    return ret;
+                //}
+                //av_frame_unref(frame);
+                //av_frame_free(&outFrame);
             
             }
         }
