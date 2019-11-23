@@ -12,13 +12,6 @@ typedef struct FilteringContext
         buffersrcCtx(NULL),
         buffersinkCtx(NULL),
         filterGraph(NULL){};
-    ~FilteringContext(){
-        if (NULL != filterGraph){
-            avfilter_graph_free(&filterGraph);
-            filterGraph = NULL;
-        }
-    }
-
     AVFilterContext *buffersrcCtx;
     AVFilterContext *buffersinkCtx;
     AVFilterGraph *filterGraph;
@@ -97,13 +90,15 @@ static enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx,const enum AVPixe
 }
 
 
-static int init_filter(FilteringContext * fctx, AVCodecContext *dec_ctx, AVCodecContext *enc_ctx, const char *filter_spec)
+static int init_filter(FilteringContext *fctx, AVCodecContext *dec_ctx, AVCodecContext *enc_ctx, const char *filter_spec)
 {
 	char args[512];
 	int ret = 0;
 	const AVFilter *buffersrc = NULL;
 	const AVFilter *buffersink = NULL;
 
+    enum AVPixelFormat pixel_fmts[] = {AV_PIX_FMT_NONE, AV_PIX_FMT_NONE};
+    pixel_fmts[0] = AV_PIX_FMT_NV12;
 	AVFilterContext *buffersrc_ctx = NULL;
 	AVFilterContext *buffersink_ctx = NULL;
 
@@ -141,10 +136,12 @@ static int init_filter(FilteringContext * fctx, AVCodecContext *dec_ctx, AVCodec
 			av_log(NULL, AV_LOG_ERROR, "Cannot create buffer sink \n");
 			goto end;
 		}
-        //enc_ctx -> pix_fmt = AV_PIX_FMT_NV12;
-        ret = av_opt_set_bin(buffersink_ctx, "pix_fmts", (uint8_t*)&enc_ctx -> pix_fmt, sizeof(enc_ctx -> pix_fmt),
-                AV_OPT_SEARCH_CHILDREN);
-        //enc_ctx -> pix_fmt = AV_PIX_FMT_CUDA;
+        ret = av_opt_set_int_list(buffersink_ctx, "pix_fmts", pixel_fmts, -1, AV_OPT_SEARCH_CHILDREN);
+        
+        
+        
+        //ret = av_opt_set_bin(buffersink_ctx, "pix_fmts", (uint8_t*)&enc_ctx -> pix_fmt, sizeof(enc_ctx -> pix_fmt),
+        //      AV_OPT_SEARCH_CHILDREN);
         if (0 > ret){
             LOG(ret, "Cannot set output pixel format");
             goto end;
@@ -177,7 +174,6 @@ static int init_filter(FilteringContext * fctx, AVCodecContext *dec_ctx, AVCodec
 	if (ret < 0)
 		goto end;
 
-	/*Fill FilteringContext*/
 	fctx -> buffersrcCtx = buffersrc_ctx;
 	fctx -> buffersinkCtx = buffersink_ctx;
 	fctx -> filterGraph = filter_graph;
@@ -490,7 +486,7 @@ int main(int argc, char* argv[])
     packet.data = NULL;
     packet.size = 0;
    //初始化过滤器
-    FilteringContext *fctx;
+    FilteringContext *fctx = new FilteringContext;
     char filterSpec[1024];
     snprintf(filterSpec, sizeof(filterSpec), "scale=%d:%d,drawtext=fontfile=%s:fontsize=%d:text=%s:x=%d:y=%d:fontcolor=%s@%f",
             width, height,
@@ -502,7 +498,6 @@ int main(int argc, char* argv[])
         LOG(ret, "Failed init_filter");
         return ret;
    } 
-   return 0; 
    while(ret >= 0){
         ret = av_read_frame(ifmt_ctx, &packet);
         if (0 > ret){
@@ -553,37 +548,33 @@ int main(int argc, char* argv[])
                 }
                 outFrame -> pts = frame -> pts;
                 av_frame_free(&frame);
-                //
-                videoScalerCtx = sws_getCachedContext(NULL,
-                        decoder_ctx -> width, decoder_ctx -> height, AV_PIX_FMT_NV12,
-                        width, height, AV_PIX_FMT_NV12,//AV_PIX_FMT_YUV420P,
-                        SWS_BICUBIC,
-                        NULL, NULL, NULL);
-                if (NULL == videoScalerCtx){
-                    LOG(-1, "Failed sws_getCachedContext");
-                    return -1;
-                }else {
-                    AVFrame *swsFrame;
-                    swsFrame = av_frame_alloc();
-                    swsFrame -> format = AV_PIX_FMT_NV12;
-                    swsFrame -> width = width;
-                    swsFrame -> height = height;
-                    swsFrame -> pts = outFrame -> pts;
-                    ret = av_frame_get_buffer(swsFrame, 0);
-                    if (0 > ret){
-                        LOG(ret, "av_frame_get_buffer failed");
-                        return ret;
-                    }
-                    int len = sws_scale(videoScalerCtx, outFrame -> data, outFrame -> linesize, 0,
-                           outFrame -> height, swsFrame -> data, swsFrame -> linesize);
-                    if (0 >= len){
-                        LOG(-1, "Failed when video repixel");
-                        av_frame_free(&swsFrame);
-                        av_frame_free(&outFrame);
-                        return -1;
-                    }
-
+                //将frame放入到filter中
+                ret = av_buffersrc_add_frame_flags(fctx -> buffersrcCtx, outFrame, 0);
+                if (0 > ret){
+                    LOG(ret, "Failed while av_buffersrc_add_frame_flags");
                     av_frame_free(&outFrame);
+                    return ret;
+                }
+                //从filter获取frame；
+                AVFrame *swsFrame;
+                swsFrame = av_frame_alloc();
+                swsFrame -> format = AV_PIX_FMT_NV12;
+                swsFrame -> width = width;
+                swsFrame -> height = height;
+                swsFrame -> pts = outFrame -> pts;
+                ret = av_frame_get_buffer(swsFrame, 0);
+                if (0 > ret){
+                    LOG(ret, "av_frame_get_buffer failed");
+                    return ret;
+                }
+                ret = av_buffersink_get_frame(fctx -> buffersinkCtx, swsFrame );
+                if (0 > ret){
+                    LOG(ret, "Failed while av_buffersink_get_frame");
+                    av_frame_free(&swsFrame);
+                    av_frame_free(&outFrame);
+                    return ret;
+                }
+                av_frame_free(&outFrame);
                     //将CPU的数据放入到GPU中
                     AVFrame *gpuFrame;
                     gpuFrame = av_frame_alloc();
@@ -611,28 +602,12 @@ int main(int argc, char* argv[])
                     av_frame_free(&gpuFrame);
                 
                 }
-
-
-
-
-                //av_frame_free(&frame);
-                //cout << "start encoding" << endl;
-                //ret = encode_write(frame);
-                //if (0 > ret){
-                //    LOG(ret, "Error during encoding and writing");
-                //    return ret;
-                //}
-                //av_frame_unref(frame);
-                //av_frame_free(&outFrame);
             
-            }
         }
-        av_packet_unref(&packet); 
-    
-    
     }
-    
+    av_packet_unref(&packet); 
     av_write_trailer(ofmt_ctx);
+    delete fctx;
     cout << "ret: " << ret << endl;
     return ret;
 }
