@@ -77,7 +77,18 @@ static enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx,const enum AVPixe
     return AV_PIX_FMT_NONE;
 }
 
-
+static int video_scale(SwsContext *repixelCtx, AVFrame *inFrame, AVFrame *outFrame)
+{
+    int len = sws_scale(repixelCtx, inFrame -> data, inFrame ->linesize, 0,
+            inFrame -> height, outFrame -> data, outFrame -> linesize);
+    if (0 >= len){
+        LOG(len ,"Failed when video video scale");
+        av_frame_free(&outFrame);
+        return -1;
+    }
+    av_frame_free(&inFrame);
+    return 0;
+}
 static int init_repixel(AVCodecContext *decCtx, AVCodecContext *encCtx, SwsContext **repixelCtx)
 {
     int error;
@@ -457,16 +468,21 @@ int main(int argc, char* argv[])
                         LOG(ret, "av_frame_get_buffer failed");
                         return ret;
                     }
-                    int len = sws_scale(videoScalerCtx, outFrame -> data, outFrame -> linesize, 0,
-                           outFrame -> height, swsFrame -> data, swsFrame -> linesize);
-                    if (0 >= len){
-                        LOG(-1, "Failed when video repixel");
-                        av_frame_free(&swsFrame);
-                        av_frame_free(&outFrame);
-                        return -1;
+                    ret = video_scale(videoScalerCtx, outFrame, swsFrame);
+                    if (0 > ret){
+                        LOG(ret, "Failed when video repixel");
                     }
+                    //int len = sws_scale(videoScalerCtx, outFrame -> data, outFrame -> linesize, 0,
+                    //       outFrame -> height, swsFrame -> data, swsFrame -> linesize);
+                    //if (0 >= len){
+                    //    LOG(-1, "Failed when video repixel");
+                    //    av_frame_free(&swsFrame);
+                    //    av_frame_free(&outFrame);
+                    //    return -1;
+                    //}
 
-                    av_frame_free(&outFrame);
+                    //av_frame_free(&outFrame);
+                    
                     //将CPU的数据放入到GPU中
                     AVFrame *gpuFrame;
                     gpuFrame = av_frame_alloc();
